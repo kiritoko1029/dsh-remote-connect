@@ -1,0 +1,16 @@
+# Remote Connect. Every field is optional; see README.md for the full list.
+# Install this bundle on BOTH computers: the one you sit at (client role) and the one whose ports
+# you want (server role). Both roles are on by default; "Share this computer" stays off until the
+# user switches it on in the panel.
+- insert:
+    - id: remote-connect
+      name: 'dsh-remote-connect'
+      config: {}
+      # config:
+      #   serverEnabled: true            # let remote DSH clients forward THIS machine's ports
+      #   shareAllowed: true             # offer "Share this computer" (needs serverEnabled)
+      #   remoteControlAllowed: true     # let another computer switch onto THIS computer's DSH (full control)
+      #   allowVersionMismatch: false    # allow switching onto a different DSH release (unsafe)
+      #   allowedHosts: [127.0.0.1, localhost, '::1']
+      #   allowedPorts: []               # e.g. ['5173', '3000-3999']; empty = any port
+      #   agentTool: true                # the remote_connect tool for the agent

@@ -1,0 +1,6 @@
+{
+  "meta": {
+    "title": "Remote Connect",
+    "description": "Switch this DSH between this computer and another computer's DSH with one button, and forward that computer's ports. \"Share this computer\" gives the DSH desktop app a one-click copyable connection address. Install it, and the same DSH release, on both computers."
+  }
+}
