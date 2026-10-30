@@ -2,6 +2,7 @@
   "name": "dsh-remote-connect",
   "version": "1.2.0",
   "description": "Connect to another computer's DSH with its URL and token, and forward that machine's ports to this one.",
+  "license": "MIT",
   "private": true,
   "type": "module",
   "exports": {

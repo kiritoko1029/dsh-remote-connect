@@ -189,3 +189,9 @@ z.object({
 1. Connect, then open the ⇄ menu: it lists each connection with its DSH release and says why one cannot be picked.
 2. Switch, check the banner, open a session list, send a trivial message.
 3. Click **Switch back to this computer's DSH** in the banner. If the window ever shows something wrong, the same button (or restarting this DSH) returns to this computer.
+
+## License · 许可证
+
+MIT © 2026 chenxc
+
+See [LICENSE](LICENSE) for the full text.
