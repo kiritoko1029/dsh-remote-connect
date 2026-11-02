@@ -167,6 +167,35 @@ npm test        # node --test test/*.test.mjs
 - `share.test.mjs`: the share door: connecting with the copied address, remembered port and token, port fallback, browser refusal, rate limiting, token reset, allow-lists, configuration off-switch, a missing token.
 - `mode.test.mjs`: switching against a fake DSH with the real trust fence: only `/api` moves, Host/Origin rewrite and cookie injection, `Set-Cookie` stripping, 1.5 MiB POST, streaming, redirects, the `/api/remote.mux` WebSocket (and refusing it unauthenticated), re-login after the DSH drops its cookie, off until allowed, immediate cut-off when the other side turns it off, version match / mismatch / unknown / too-old, switching back on disconnect or removal, the upgrade interceptor, and release detection.
 
+## Publishing to npm · 自动发布
+
+GitHub Actions tests the package on every push to `main` and every pull request. Publishing a **GitHub Release** triggers [Publish to npm](.github/workflows/publish.yml): it checks the release version, runs the tests, packs the tested source and publishes it to npm with provenance. The package has no dependencies or build step.
+
+### One-time authentication · 首次配置
+
+For the first publication, create a **granular access token** on [npm](https://www.npmjs.com/settings/~/tokens) with read/write access that permits creating `dsh-remote-connect`, and enable **Bypass 2FA** for CI publishing. Store it as the repository Actions secret **`NPM_TOKEN`** at [Settings → Secrets and variables → Actions](https://github.com/kiritoko1029/dsh-remote-connect/settings/secrets/actions). Do not put it in the repository. Publishing a release then uses this token automatically; no local `npm login` is needed. Tokens expire, so renew it before expiry if continuing to use token authentication.
+
+After the package exists, you can use [npm Trusted Publishing](https://docs.npmjs.com/trusted-publishers/) instead of keeping a token. In the npm package's **Settings → Trusted publishing**, add a GitHub Actions publisher with these exact values:
+
+| Field | Value |
+|---|---|
+| Organization or user | `kiritoko1029` |
+| Repository | `dsh-remote-connect` |
+| Workflow filename | `publish.yml` |
+| Environment name | Leave empty |
+| Allowed actions | Allow direct `npm publish` |
+
+The workflow already enables `id-token: write` and uses a current npm 11 on Node 24. npm tries OIDC authentication first. Once a release has published successfully through the trusted publisher, remove the `NPM_TOKEN` repository secret and revoke the old token on npm. New trusted publisher configurations must complete a successful publication within two days.
+
+### Release a version · 发布新版本
+
+1. Update `package.json` to a new version, commit and push it to `main`. For example: `npm version 1.3.1 --no-git-tag-version`, then commit and push.
+2. Open [GitHub → Releases → Draft a new release](https://github.com/kiritoko1029/dsh-remote-connect/releases/new), select `main` and create a tag matching the package version **exactly**, such as `v1.3.1`. For the prepared first version, use `v1.3.0`.
+3. Publish the release. A stable version goes to npm's `latest` tag. A version such as `1.4.0-beta.1` must have **Set as a pre-release** checked and goes to `next` instead.
+4. Check the [Actions run](https://github.com/kiritoko1029/dsh-remote-connect/actions/workflows/publish.yml) for the publishing result. If authentication fails, fix its configuration and use **Re-run failed jobs** on that run.
+
+Drafting a release or pushing a tag alone does not publish to npm. Version/tag mismatches or failing tests stop publication. npm versions are immutable: if a version is already published, use a new version for further changes.
+
 ## Config schema
 
 `lib/config.js` embeds the serialized form of this schemastery definition so Settings can describe the fields:

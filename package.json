@@ -1,9 +1,13 @@
 {
   "name": "dsh-remote-connect",
-  "version": "1.2.0",
-  "description": "Connect to another computer's DSH with its URL and token, and forward that machine's ports to this one.",
+  "version": "1.3.0",
+  "description": "Connect to another computer's DSH with its URL and token, forward that machine's ports, and open its files with this computer's programs.",
   "license": "MIT",
-  "private": true,
+  "keywords": ["dsh", "deepseek-harness", "plugin", "remote", "port-forwarding", "tunnel"],
+  "repository": { "type": "git", "url": "git+https://github.com/kiritoko1029/dsh-remote-connect.git" },
+  "homepage": "https://github.com/kiritoko1029/dsh-remote-connect#readme",
+  "bugs": { "url": "https://github.com/kiritoko1029/dsh-remote-connect/issues" },
+  "publishConfig": { "access": "public", "registry": "https://registry.npmjs.org/" },
   "type": "module",
   "exports": {
     ".": "./index.js",
@@ -13,7 +17,8 @@
   },
   "files": ["index.js", "client.js", "lib/*.js", "cordis.patch.yml", "locale/*.json", "icon.svg", "README.md"],
   "scripts": {
-    "test": "node --test test/*.test.mjs"
+    "test": "node --test test/*.test.mjs",
+    "prepublishOnly": "npm test"
   },
   "dsh": {
     "bundle": { "patch": "./cordis.patch.yml" },

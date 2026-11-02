@@ -1,0 +1,76 @@
+name: Publish to npm
+
+on:
+  release:
+    types: [published]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: npm-publish-${{ github.event.release.tag_name }}
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    name: Publish release package
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          ref: ${{ github.event.release.tag_name }}
+          persist-credentials: false
+      - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
+        with:
+          node-version: '24'
+          registry-url: 'https://registry.npmjs.org'
+          package-manager-cache: false
+      - name: Ensure npm supports trusted publishing
+        run: npm install --global npm@11
+      - name: Validate release version
+        id: release
+        env:
+          RELEASE_TAG: ${{ github.event.release.tag_name }}
+          RELEASE_PRERELEASE: ${{ github.event.release.prerelease }}
+        run: |
+          node --input-type=module <<'NODE'
+          import { appendFileSync, readFileSync } from 'node:fs'
+          const pkg = JSON.parse(readFileSync('package.json', 'utf8'))
+          if (pkg.name !== 'dsh-remote-connect' || pkg.private === true) {
+            throw new Error('Expected the public dsh-remote-connect package')
+          }
+          if (process.env.RELEASE_TAG !== `v${pkg.version}`) {
+            throw new Error(`Release tag must be v${pkg.version}; received ${process.env.RELEASE_TAG}`)
+          }
+          const prerelease = pkg.version.includes('-')
+          if (prerelease !== (process.env.RELEASE_PRERELEASE === 'true')) {
+            throw new Error('The GitHub prerelease checkbox must match the package version suffix')
+          }
+          const tag = prerelease ? 'next' : 'latest'
+          appendFileSync(process.env.GITHUB_OUTPUT, `dist_tag=${tag}\n`)
+          console.log(`Publishing ${pkg.name}@${pkg.version} to ${tag}`)
+          NODE
+      # This package has no dependencies or build step, so no install is needed.
+      - run: npm test
+      - name: Pack the tested source
+        id: pack
+        run: |
+          npm pack --pack-destination "$RUNNER_TEMP" --json > "$RUNNER_TEMP/npm-pack.json"
+          node --input-type=module <<'NODE'
+          import { appendFileSync, readFileSync } from 'node:fs'
+          import { join } from 'node:path'
+          const [pkg] = JSON.parse(readFileSync(join(process.env.RUNNER_TEMP, 'npm-pack.json'), 'utf8'))
+          appendFileSync(process.env.GITHUB_OUTPUT, `tarball=${join(process.env.RUNNER_TEMP, pkg.filename)}\n`)
+          console.log(`Packed ${pkg.filename}: ${pkg.entryCount} files, integrity ${pkg.integrity}`)
+          NODE
+      - name: Publish to npm
+        env:
+          # npm tries OIDC first; a granular token can bootstrap the first publication.
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+          PACKAGE_TARBALL: ${{ steps.pack.outputs.tarball }}
+          NPM_DIST_TAG: ${{ steps.release.outputs.dist_tag }}
+        run: npm publish "$PACKAGE_TARBALL" --access public --provenance --tag "$NPM_DIST_TAG" --registry https://registry.npmjs.org
