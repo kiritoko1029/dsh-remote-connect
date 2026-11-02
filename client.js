@@ -1026,6 +1026,9 @@ window.__ModuleLoader__.load({
 .rcm-btn:hover{background:var(--dsw-alias-bg-layer-2);color:var(--dsw-alias-label-primary)}
 .rcm-btn:focus-visible{outline:2px solid var(--dsw-alias-brand-primary);outline-offset:1px}
 .rcm-btn.remote{color:var(--dsw-alias-brand-primary)}
+.rcm-wrap{display:inline-flex;align-items:center;gap:6px;min-width:0;max-width:100%}
+.rcm-conn{min-width:0;max-width:140px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--dsw-alias-state-success-primary,#22a05a);font-size:12px;line-height:18px;font-weight:500}
+.rcm-conn.down{color:var(--dsw-alias-state-error-primary)}
 .rcm-dot{position:absolute;top:3px;right:3px;width:7px;height:7px;border-radius:50%;background:var(--dsw-alias-brand-primary)}
 .rcm-menu{position:fixed;z-index:2100;box-sizing:border-box;min-width:280px;max-width:min(360px,calc(100vw - 24px));max-height:calc(100vh - 24px);overflow:auto;padding:6px;border:1px solid var(--dsw-alias-border-l2);border-radius:12px;background:var(--dsw-alias-bg-overlay);color:var(--dsw-alias-label-primary);font-size:13px;line-height:20px;box-shadow:0 8px 24px color-mix(in srgb,var(--dsw-alias-label-primary) 18%,transparent)}
 .rcm-menu *{box-sizing:border-box}
@@ -1249,7 +1252,7 @@ window.__ModuleLoader__.load({
         }
       };
 
-      return h('div', null,
+      return h('div', { className: 'rcm-wrap' },
         h('style', null, MODE_CSS),
         h('button', {
           ref: buttonRef,
@@ -1261,6 +1264,7 @@ window.__ModuleLoader__.load({
           'aria-expanded': open,
           onClick: toggle,
         }, h(SwitchIcon, { size: 16 }), remote ? h('span', { className: 'rcm-dot', 'aria-hidden': true }) : null),
+        remote ? h('span', { className: `rcm-conn${mode.connected ? '' : ' down'}`, title }, mode.name) : null,
         open ? h('div', { ref: menuRef, className: 'rcm-menu', role: 'menu', style: pos },
           h('div', { className: 'rcm-title' }, t('mode.menuTitle')),
           h('button', { type: 'button', role: 'menuitemradio', 'aria-checked': !remote, className: 'rcm-item', disabled: busy || !remote, onClick: () => choose(null) },
@@ -1454,11 +1458,7 @@ window.__ModuleLoader__.load({
           name: 'sidebar.footer.action', id: 'remote-connect.mode', order: 0, label: () => t('mode.menuTitle'), locale: NS,
           inject: () => ({ store, openPanel }),
         }, ModeSwitch));
-        // While on a remote DSH, say so on every page and offer the way back.
-        ctx.slots.inject('shell.overlay', () => ctx.slots.register({
-          name: 'shell.overlay', id: 'remote-connect.banner', locale: NS,
-          inject: () => ({ store }),
-        }, ModeBanner));
+        // No top banner any more: the connection name is shown (green) beside the switch button above.
       },
     };
   },

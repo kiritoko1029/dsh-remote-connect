@@ -20,6 +20,7 @@
 import { readFileSync } from 'node:fs'
 import { Config, resolveSettings } from './lib/config.js'
 import { detectDshVersion } from './lib/dsh-version.js'
+import { createFileAccess } from './lib/file-access.js'
 import { createGuiBridge } from './lib/gui-bridge.js'
 import { RemoteConnectManager } from './lib/manager.js'
 import { ROUTE_PREFIX, RemoteError } from './lib/remote.js'
@@ -110,6 +111,8 @@ export function apply(ctx, rawConfig) {
   })
   manager = new RemoteConnectManager({ store, settings: getSettings, logger, serverApi, guiBridge, localDsh: dshVersion, admit: (req) => connection.admit(req) })
 
+  const fileAccess = createFileAccess({ maxBytes: settings.fileMaxMB * 1024 * 1024 })
+
   /** Authenticate a request as the owner. Returns an HTTP status when it must be refused. */
   const refusal = (req) => {
     const admission = connection.admit(req)
@@ -129,6 +132,11 @@ export function apply(ctx, rawConfig) {
 
     if (route === '/info' && method === 'GET') return sendJson(res, 200, await serverApi.info({ via: 'dsh', gui: settings.remoteControlAllowed }))
     if (route === '/ports' && method === 'GET') return sendJson(res, 200, await serverApi.ports())
+    if (route === '/file') {
+      // Reading and replacing files is the same reach as letting a remote client open this DSH at all.
+      if (!settings.remoteControlAllowed) return sendText(res, 403, 'remote control is turned off on this computer')
+      return fileAccess.handle(req, res, url)
+    }
     if (route === '/api/state' && method === 'GET') return sendJson(res, 200, { ok: true, value: manager.state() })
     if (route === '/api/call' && method === 'POST') {
       try {
@@ -191,7 +199,15 @@ export function apply(ctx, rawConfig) {
   ctx.on(
     'connection/request',
     async (req, res, next) => {
-      if (!manager.mode.intercepts(req)) return next()
+      if (!manager.mode.intercepts(req)) {
+        if (String(req.url ?? '').includes('/api/session/') && /WorkspacePath/i.test(String(req.url))) manager.remoteOpen.trace(`${req.method} ${req.url} is local (not switched, or already relayed)`)
+        return next()
+      }
+      // "Open" on a remote file: copy it here and open it with this computer's program instead of asking the remote desktop.
+      if (manager.remoteOpen.claims(req)) {
+        await manager.remoteOpen.handle(req, res)
+        return undefined
+      }
       await manager.mode.proxyHttp(req, res)
       return undefined
     },

@@ -74,6 +74,17 @@ The relay rides a `?gui=1` tunnel that ends in the other computer's **gui bridge
 
 Switching is not persistent: restarting this DSH starts on this computer. Changing the data source reloads the window (everything on screen came from the other source).
 
+## Opening remote files with local programs · 用本机程序打开远程文件
+
+While the window uses another computer's DSH, the file controls ("Open", "Open with", "Show file location" in the document preview) would ask the *remote* Host to open the path on *its* desktop. Remote Connect answers those three calls (`session/canOpenWorkspacePath`, `session/workspacePathApplications`, `session/openWorkspacePath`) on this computer instead (`lib/remote-open.js`):
+
+1. The program list is this computer's own for that file type (asked about an empty probe file of the same extension).
+2. Opening copies the file to a private temporary folder (`<tmp>/dsh-remote-open-<uid>/<id>/<original name>`, mode `0700`/`0600`) and has this computer's DSH open **the copy** with the program you picked, or the default one for the type.
+3. When you save, the copy is sent back (`PUT /remote-connect/file`, `If-Match` with the etag of the version you opened). Editors that save by replacing the file are handled. If the file changed on the other computer meanwhile, nothing is overwritten; the edited copy is kept and listed in `pendingFiles` of the panel state.
+4. A copy that is in sync, not held open by any program (`lsof`, macOS/Linux) and untouched for `openCleanupMinutes` is deleted. When this DSH quits it sends unsent edits, then deletes every synced copy. Copies that are not on the other computer yet are never deleted. Leftovers of a crash older than a day are purged at the next copy.
+
+Needs this plugin (same version) on the other computer, with `remoteControlAllowed` on. Limits: regular files up to `fileMaxMB`; folders are refused. Only the file controls that use the session calls above are covered: the Session-header "Open In…" folder button and the delivery cards use separate routes and still act on this computer.
+
 ## Agent tool
 
 `remote_connect` works on **saved** connections only: `list`, `connect`, `disconnect`, `forward`, `unforward`, `ports`. Tokens are typed into the panel and never pass through the model or the session log; `list` reports whether sharing is on and which DSH the window is on, but never an address. `connect` and `forward` ask for approval; `forward` only listens on `127.0.0.1`. Turning sharing, remote control or switching on or off is user-only.
@@ -96,6 +107,9 @@ Edit the `remote-connect` row's `config` in `cordis.patch.yml` (or the profile's
 | `connectTimeoutMs` | `10000` | Timeout reaching a remote or its target. |
 | `keepAliveSeconds` | `25` | Health-check and tunnel ping interval. |
 | `agentTool` | `true` | Register `remote_connect`. |
+| `openRemoteFiles` | `true` | Open the other computer's files with this computer's programs while switched onto it. |
+| `fileMaxMB` | `512` | Largest file copied either way for opening or saving. |
+| `openCleanupMinutes` | `60` | Minutes without changes after which a synced temporary copy is deleted. |
 
 ## Security model
 
